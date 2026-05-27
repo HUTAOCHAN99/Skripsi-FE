@@ -1,0 +1,35 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      [
+        'build',
+        '-t',
+        'asia-southeast2-docker.pkg.dev/angelic-bee-477417-t8/frontend-repo/skripsi-fe:$COMMIT_SHA',
+        '.'
+      ]
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      [
+        'push',
+        'asia-southeast2-docker.pkg.dev/angelic-bee-477417-t8/frontend-repo/skripsi-fe:$COMMIT_SHA'
+      ]
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      [
+        'run',
+        'deploy',
+        'skripsi-frontend',
+        '--image',
+        'asia-southeast2-docker.pkg.dev/angelic-bee-477417-t8/frontend-repo/skripsi-fe:$COMMIT_SHA',
+        '--region',
+        'asia-southeast2',
+        '--platform',
+        'managed',
+        '--allow-unauthenticated'
+      ]
+
+images:
+  - 'asia-southeast2-docker.pkg.dev/angelic-bee-477417-t8/frontend-repo/skripsi-fe:$COMMIT_SHA'
