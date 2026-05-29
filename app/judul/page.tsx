@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
@@ -17,6 +17,8 @@ interface DosenPembimbing {
   id: string;
   nama: string;
   nip: string;
+  kuota: number;  // ✅ Tambahkan field kuota
+  terisi: number; // ✅ Tambahkan field terisi
 }
 
 interface PengajuanJudul {
@@ -31,12 +33,45 @@ interface PengajuanJudul {
   dosenPembimbing?: DosenPembimbing;
 }
 
+interface ApiError {
+  message: string;
+  response?: {
+    data?: {
+      message?: string;
+      error?: string;
+    };
+  };
+}
+
 export default function PengajuanJudulPage() {
   const router = useRouter();
   const [pengajuanList, setPengajuanList] = useState<PengajuanJudul[]>([]);
+  const [dosenList, setDosenList] = useState<DosenPembimbing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedDosen, setSelectedDosen] = useState<Record<string, string>>({});
+
+  // ✅ Pindahkan fetchData ke atas sebelum useEffect
+  const fetchData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const [pengajuanResponse, dosenResponse] = await Promise.all([
+        api.getPengajuanList(),
+        api.getDosenList()
+      ]);
+      
+      const pengajuanData = Array.isArray(pengajuanResponse) ? pengajuanResponse : pengajuanResponse?.data || [];
+      const dosenData = Array.isArray(dosenResponse) ? dosenResponse : dosenResponse?.data || [];
+      
+      setPengajuanList(pengajuanData);
+      setDosenList(dosenData);
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -47,44 +82,41 @@ export default function PengajuanJudulPage() {
       return;
     }
     
-    // ⚠️ ADMIN tidak boleh akses halaman ini!
-    if (role === 'ADMIN') {
-      alert('Admin tidak memiliki akses ke halaman Approval Judul. Halaman ini khusus untuk Dosen.');
+    // ✅ HANYA ADMIN yang bisa akses halaman ini!
+    if (role !== 'ADMIN') {
+      alert('Halaman ini khusus untuk Admin. Dosen tidak memiliki akses approval judul.');
       router.push('/dashboard');
       return;
     }
     
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setUserRole(role);
-    // eslint-disable-next-line react-hooks/immutability
-    fetchPengajuan();
-  }, [router]);
-
-  const fetchPengajuan = async () => {
-    try {
-      setIsLoading(true);
-      const response = await api.getPengajuanList();
-      // Tampilkan semua pengajuan, tapi hanya yang PENDING yang bisa di-action
-      const data = Array.isArray(response) ? response : response?.data || [];
-      setPengajuanList(data);
-    } catch (error) {
-      console.error('Failed to fetch pengajuan:', error);
-    } finally {
-      setIsLoading(false);
+    // ✅ Set state tanpa warning
+    if (role) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUserRole(role);
     }
-  };
+    fetchData();
+  }, [router, fetchData]);
 
   const handleApprove = async (id: string) => {
-    const confirmMsg = 'Apakah Anda yakin ingin menyetujui judul ini?\n\nMahasiswa akan langsung dapat melanjutkan ke tahap bimbingan.';
+    const dosenId = selectedDosen[id];
+    
+    if (!dosenId) {
+      alert('Silakan pilih dosen pembimbing terlebih dahulu!');
+      return;
+    }
+    
+    const dosen = dosenList.find(d => d.id === dosenId);
+    const confirmMsg = `Apakah Anda yakin ingin menyetujui judul ini?\n\nDosen Pembimbing: ${dosen?.nama}\nKuota tersedia: ${dosen?.kuota ? (dosen.kuota - (dosen.terisi || 0)) : '?'}\n\nMahasiswa akan langsung dapat melanjutkan ke tahap bimbingan.`;
+    
     if (!confirm(confirmMsg)) return;
     
     try {
-      await api.approvePengajuan(id, '');
+      await api.approvePengajuan(id, dosenId);
       alert('✅ Pengajuan berhasil disetujui!');
-      fetchPengajuan();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      alert('❌ Gagal approve: ' + (err.message || 'Terjadi kesalahan'));
+      fetchData();
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      alert('❌ Gagal approve: ' + (error.message || 'Terjadi kesalahan'));
     }
   };
 
@@ -104,10 +136,10 @@ export default function PengajuanJudulPage() {
     try {
       await api.rejectPengajuan(id, catatan);
       alert('❌ Pengajuan ditolak!');
-      fetchPengajuan();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      alert('❌ Gagal reject: ' + (err.message || 'Terjadi kesalahan'));
+      fetchData();
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      alert('❌ Gagal reject: ' + (error.message || 'Terjadi kesalahan'));
     }
   };
 
@@ -126,7 +158,7 @@ export default function PengajuanJudulPage() {
 
   const pendingCount = pengajuanList.filter(p => p.status === 'PENDING').length;
 
-  if (userRole === 'ADMIN') return null;
+  if (userRole !== 'ADMIN') return null;
 
   return (
     <div className="flex bg-gray-100 min-h-screen">
@@ -142,7 +174,7 @@ export default function PengajuanJudulPage() {
                   Approval Pengajuan Judul TA
                 </h1>
                 <p className="text-gray-500 mt-1">
-                  Menyetujui atau menolak judul dari mahasiswa bimbingan Anda
+                  Menyetujui atau menolak judul dari mahasiswa dan menetapkan dosen pembimbing
                 </p>
               </div>
               <div className="flex gap-3">
@@ -151,7 +183,7 @@ export default function PengajuanJudulPage() {
                     Menunggu: {pendingCount}
                   </span>
                 </div>
-                <Button variant="secondary" onClick={fetchPengajuan}>
+                <Button variant="secondary" onClick={fetchData}>
                   🔄 Refresh
                 </Button>
               </div>
@@ -162,11 +194,12 @@ export default function PengajuanJudulPage() {
               <div className="flex items-start gap-3">
                 <div className="text-blue-500 text-xl">ℹ️</div>
                 <div className="text-sm text-blue-800">
-                  <p className="font-semibold mb-1">Informasi untuk Dosen:</p>
+                  <p className="font-semibold mb-1">Informasi untuk Admin:</p>
                   <ul className="list-disc list-inside space-y-1 text-blue-700">
                     <li>Hanya judul dengan status <strong>Menunggu</strong> yang dapat disetujui/ditolak</li>
                     <li>Penolakan harus disertai alasan yang jelas untuk revisi mahasiswa</li>
-                    <li>Setelah disetujui, mahasiswa dapat melanjutkan ke tahap bimbingan</li>
+                    <li>Persetujuan harus memilih <strong>Dosen Pembimbing</strong> yang akan membimbing mahasiswa</li>
+                    <li>Pastikan kuota dosen masih tersedia sebelum menyetujui</li>
                   </ul>
                 </div>
               </div>
@@ -185,7 +218,7 @@ export default function PengajuanJudulPage() {
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">📭</div>
                 <h3 className="text-lg font-semibold text-gray-700">Belum ada pengajuan judul</h3>
-                <p className="text-gray-500 mt-1">Mahasiswa bimbingan Anda belum mengajukan judul TA</p>
+                <p className="text-gray-500 mt-1">Mahasiswa belum mengajukan judul TA</p>
               </div>
             )}
 
@@ -262,25 +295,43 @@ export default function PengajuanJudulPage() {
                         )}
                       </div>
 
-                      {/* Action Buttons - ONLY for PENDING */}
+                      {/* Action Buttons - ONLY for PENDING and ADMIN */}
                       {item.status === 'PENDING' && (
-                        <div className="flex gap-2 ml-4">
-                          <Button
-                            variant="success"
-                            size="sm"
-                            onClick={() => handleApprove(item.id)}
-                            className="whitespace-nowrap"
+                        <div className="flex flex-col gap-2 ml-4 w-64">
+                          {/* Pilih Dosen Pembimbing */}
+                          <select
+                            className="px-3 py-2 border rounded-lg text-sm text-gray-600 bg-white"
+                            value={selectedDosen[item.id] || ''}
+                            onChange={(e) => setSelectedDosen(prev => ({ ...prev, [item.id]: e.target.value }))}
                           >
-                            ✅ Setujui
-                          </Button>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => handleReject(item.id)}
-                            className="whitespace-nowrap"
-                          >
-                            ❌ Tolak
-                          </Button>
+                            <option value="">-- Pilih Dosen Pembimbing --</option>
+                            {dosenList.map(dosen => {
+                              const kuotaTersedia = dosen.kuota - (dosen.terisi || 0);
+                              return (
+                                <option key={dosen.id} value={dosen.id}>
+                                  {dosen.nama} (Kuota: {kuotaTersedia}/{dosen.kuota})
+                                </option>
+                              );
+                            })}
+                          </select>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="success"
+                              size="sm"
+                              onClick={() => handleApprove(item.id)}
+                              className="flex-1 whitespace-nowrap"
+                            >
+                              ✅ Setujui
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleReject(item.id)}
+                              className="flex-1 whitespace-nowrap"
+                            >
+                              ❌ Tolak
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </div>

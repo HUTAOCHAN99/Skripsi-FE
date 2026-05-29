@@ -13,11 +13,10 @@ import {
   GraduationCap,
   ClipboardList,
   UserCog,
-  BarChart3
 } from 'lucide-react';
 
 // ============ MENU UNTUK ADMIN ============
-// Admin: Manajemen sistem, tidak punya akses approve judul
+// Admin: Memiliki akses Approval Judul (karena Admin yang approve)
 const adminMenuItems = [
   { 
     name: 'Dashboard', 
@@ -36,6 +35,12 @@ const adminMenuItems = [
     path: '/mahasiswa', 
     icon: GraduationCap,
     description: 'Tambah/edit/hapus mahasiswa'
+  },
+  { 
+    name: 'Approval Judul', 
+    path: '/judul', 
+    icon: BookOpen,
+    description: 'Setujui/tolak pengajuan judul TA'  // ✅ ADMIN yang approve
   },
   { 
     name: 'Verifikasi Berkas', 
@@ -70,7 +75,7 @@ const adminMenuItems = [
 ];
 
 // ============ MENU UNTUK DOSEN ============
-// Dosen: Akademik & bimbingan, TIDAK bisa kelola user
+// Dosen: TIDAK punya akses Approval Judul (karena itu tugas Admin)
 const dosenMenuItems = [
   { 
     name: 'Dashboard', 
@@ -79,16 +84,10 @@ const dosenMenuItems = [
     description: 'Ringkasan bimbingan'
   },
   { 
-    name: 'Approval Judul', 
-    path: '/judul', 
-    icon: BookOpen,
-    description: 'Setujui/tolak judul mahasiswa bimbingan'
-  },
-  { 
     name: 'Log Bimbingan', 
     path: '/bimbingan', 
     icon: MessageSquare,
-    description: 'Kelola log bimbingan mahasiswa'
+    description: 'Kelola log bimbingan mahasiswa (approve/reject)'
   },
   { 
     name: 'Jadwal Sidang', 
@@ -110,12 +109,10 @@ export default function Sidebar() {
   const [userName, setUserName] = useState<string>('');
 
   useEffect(() => {
-    // Ambil role dari localStorage
     const role = localStorage.getItem('userRole');
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setUserRole(role);
     
-    // Ambil nama user dari localStorage
     const userStr = localStorage.getItem('user');
     if (userStr) {
       try {
@@ -127,13 +124,11 @@ export default function Sidebar() {
     }
   }, []);
 
-  // Pilih menu berdasarkan role
   const menuItems = userRole === 'ADMIN' ? adminMenuItems : dosenMenuItems;
   const activeColor = userRole === 'ADMIN' ? 'bg-blue-600' : 'bg-green-600';
   const headerBg = userRole === 'ADMIN' ? 'from-blue-600 to-blue-800' : 'from-green-600 to-green-800';
   const roleLabel = userRole === 'ADMIN' ? 'Administrator' : 'Dosen Pembimbing';
 
-  // Jika role belum diketahui, tampilkan loading
   if (!userRole) {
     return (
       <aside className="w-64 bg-gray-900 min-h-screen fixed left-0 top-0 overflow-y-auto">
@@ -149,8 +144,7 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 bg-gray-900 min-h-screen fixed left-0 top-0 overflow-y-auto">
-      {/* Header Sidebar */}
-      <div className={`p-4 bg-gradient-to-r ${headerBg}`}>
+      <div className={`p-4 bg-linear-to-r ${headerBg}`}>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
             {userRole === 'ADMIN' ? '🎛️' : '📚'}
@@ -164,7 +158,6 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* User Info */}
       <div className="p-4 border-b border-gray-800">
         <p className="text-sm text-gray-300 truncate">{userName}</p>
         <p className="text-xs text-gray-500 mt-1">
@@ -172,7 +165,6 @@ export default function Sidebar() {
         </p>
       </div>
 
-      {/* Navigation Menu */}
       <nav className="p-4">
         {menuItems.map((item) => {
           const Icon = item.icon;
@@ -203,7 +195,6 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Footer Info */}
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800 text-center">
         <p className="text-xs text-gray-600">
           © {new Date().getFullYear()} Sistem TA

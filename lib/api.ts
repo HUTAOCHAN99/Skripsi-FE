@@ -13,18 +13,15 @@ class ApiClient {
   private async request(endpoint: string, options: RequestInit = {}) {
     const url = `${BASE_URL}${endpoint}`;
     
-    // ✅ Perbaiki tipe headers
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
-    // ✅ HANYA tambahkan Authorization jika token ada dan BUKAN endpoint login/register
     const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/register');
     if (this.token && !isAuthEndpoint) {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
 
-    // ✅ Merge dengan headers dari options
     const finalHeaders = {
       ...headers,
       ...(options.headers as Record<string, string> || {})
@@ -36,10 +33,10 @@ class ApiClient {
         headers: finalHeaders 
       });
       
-      // ✅ JANGAN handle 401 untuk endpoint login/register
       if (response.status === 401 && !isAuthEndpoint) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
         }
@@ -70,6 +67,7 @@ class ApiClient {
       this.token = data.data.token;
       localStorage.setItem('token', data.data.token);
       localStorage.setItem('user', JSON.stringify(data.data.user));
+      localStorage.setItem('userRole', data.data.user?.role);
     }
     return data;
   }
@@ -99,6 +97,7 @@ class ApiClient {
     this.token = null;
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
   }
 
   // ============ DOSEN ENDPOINTS ============
@@ -163,6 +162,8 @@ class ApiClient {
     nama: string;
     nim: string;
     angkatan: number;
+    noTelp?: string;
+    alamat?: string;
   }) {
     return this.request('/mahasiswa', {
       method: 'POST',
@@ -328,6 +329,7 @@ class ApiClient {
       if (response.status === 401) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
         window.location.href = '/login';
         throw new Error('Sesi habis, silakan login kembali');
       }
