@@ -30,7 +30,6 @@ export default function LoginPage() {
       
       if (response.success) {
         const userRole = response.data?.user?.role;
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const userData = response.data?.user;
         
         // ✅ PERBAIKI: Redirect ke /dashboard (satu dashboard untuk semua role)
@@ -38,6 +37,8 @@ export default function LoginPage() {
         if (userRole === 'ADMIN' || userRole === 'DOSEN') {
           // Simpan role ke localStorage untuk keperluan sidebar
           localStorage.setItem('userRole', userRole);
+          localStorage.setItem('user', JSON.stringify(userData));
+          window.dispatchEvent(new Event('role-change'));
           router.push('/dashboard');
         } else {
           setError('Role tidak dikenali atau akses ditolak');
