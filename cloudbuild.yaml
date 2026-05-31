@@ -1,40 +1,18 @@
 steps:
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      [
-        'build',
-        '-t',
-        'asia-southeast2-docker.pkg.dev/angelic-bee-477417-t8/skripsi-fe/skripsi-fe:$COMMIT_SHA',
-        '.'
-      ]
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['ci']
 
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      [
-        'push',
-        'asia-southeast2-docker.pkg.dev/angelic-bee-477417-t8/skripsi-fe/skripsi-fe:$COMMIT_SHA'
-      ]
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['run', 'build']
+    env:
+      - 'NEXT_PUBLIC_API_URL=https://skripsi-backend-514828886605.asia-southeast2.run.app/api'
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
+    entrypoint: 'gcloud'
     args:
-      [
-        'run',
-        'deploy',
-        'skripsi-frontend',
-        '--image',
-        'asia-southeast2-docker.pkg.dev/angelic-bee-477417-t8/skripsi-fe/skripsi-fe:$COMMIT_SHA',
-        '--region',
-        'asia-southeast2',
-        '--platform',
-        'managed',
-        '--allow-unauthenticated',
-        '--port',
-        '8080'
-      ]
+      - 'app'
+      - 'deploy'
+      - 'app.yaml'
+      - '--quiet'
 
-images:
-  - 'asia-southeast2-docker.pkg.dev/angelic-bee-477417-t8/skripsi-fe/skripsi-fe:$COMMIT_SHA'
-
-options:
-  logging: CLOUD_LOGGING_ONLY
+timeout: '1200s'

@@ -1,0 +1,5 @@
+runtime: nodejs20
+service: default
+
+env_variables:
+  NEXT_PUBLIC_API_URL: "https://skripsi-backend-514828886605.asia-southeast2.run.app/api"
