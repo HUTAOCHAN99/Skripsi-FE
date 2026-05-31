@@ -29,8 +29,23 @@ export default function PlottingDosenPage() {
       return;
     }
 
-    // eslint-disable-next-line react-hooks/immutability
-    fetchDosenList();
+    // ── Route Guard: hanya ADMIN ──
+    const checkRoleAndFetch = async () => {
+      try {
+        const me = await api.getMe();
+        const role = me.data?.user?.role;
+        if (role !== 'ADMIN') {
+          router.push('/dashboard');
+          return;
+        }
+        await fetchDosenList();
+      } catch {
+        router.push('/login');
+      }
+    };
+
+    checkRoleAndFetch();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const fetchDosenList = async () => {
@@ -88,7 +103,7 @@ export default function PlottingDosenPage() {
                 <h1 className="text-2xl font-bold text-gray-600">Plotting Dosen Pembimbing</h1>
                 <p className="text-gray-600 mt-1">Kelola dosen pembimbing mahasiswa</p>
               </div>
-              <Button variant="primary" onClick={() => router.push('/dosen/tambah')}>
+              <Button variant="primary" onClick={() => router.push('/register/dosen')}>
                 + Tambah Dosen
               </Button>
             </div>
@@ -129,13 +144,9 @@ export default function PlottingDosenPage() {
                           </span>
                         </td>
                         <td className="p-3">
-                          <Button 
-                            variant="primary" 
-                            size="sm"
-                            onClick={() => router.push(`/dosen/${dosen.id}/bimbingan`)}
-                          >
-                            Atur Bimbingan
-                          </Button>
+                          <span className="text-xs text-gray-500">
+                            Assign mahasiswa dilakukan di menu Pengajuan Judul
+                          </span>
                         </td>
                       </tr>
                     ))

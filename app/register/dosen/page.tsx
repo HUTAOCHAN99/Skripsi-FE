@@ -1,6 +1,6 @@
 // app/register/dosen/page.tsx
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, User, Mail, Lock, Briefcase, IdCard } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -21,6 +21,27 @@ export default function RegisterDosenPage() {
     kuota: 5,
   });
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    const checkAdmin = async () => {
+      try {
+        const me = await api.getMe();
+        if (me.data?.user?.role !== 'ADMIN') {
+          router.push('/dashboard');
+        }
+      } catch {
+        router.push('/login');
+      }
+    };
+
+    checkAdmin();
+  }, [router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -40,10 +61,9 @@ export default function RegisterDosenPage() {
     }
 
     try {
-      const response = await api.register({
+      const response = await api.createDosen({
         email: formData.email,
         password: formData.password,
-        role: 'DOSEN',
         nama: formData.nama,
         nip: formData.nip,
         bidangKeahlian: formData.bidangKeahlian,
@@ -51,9 +71,9 @@ export default function RegisterDosenPage() {
       });
 
       if (response.success) {
-        setSuccess('Registrasi berhasil! Silakan login.');
+        setSuccess('Dosen berhasil ditambahkan.');
         setTimeout(() => {
-          router.push('/login');
+          router.push('/dosen/plotting');
         }, 2000);
       } else {
         setError(response.message || 'Registrasi gagal');
@@ -223,7 +243,7 @@ export default function RegisterDosenPage() {
             </button>
             <button
               type="button"
-              onClick={() => router.push('/login')}
+              onClick={() => router.push('/dosen/plotting')}
               className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-600"
             >
               Kembali

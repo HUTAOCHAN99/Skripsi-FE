@@ -12,43 +12,33 @@ class ApiClient {
 
   private async request(endpoint: string, options: RequestInit = {}) {
     const url = `${BASE_URL}${endpoint}`;
-    
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
     const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/register');
     if (this.token && !isAuthEndpoint) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+      headers.Authorization = `Bearer ${this.token}`;
     }
 
     const finalHeaders = {
       ...headers,
-      ...(options.headers as Record<string, string> || {})
+      ...((options.headers as Record<string, string>) || {}),
     };
 
     try {
-      const response = await fetch(url, { 
-        ...options, 
-        headers: finalHeaders 
-      });
-      
+      const response = await fetch(url, { ...options, headers: finalHeaders });
+
       if (response.status === 401 && !isAuthEndpoint) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        localStorage.removeItem('userRole');
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
+        if (typeof window !== 'undefined') window.location.href = '/login';
         throw new Error('Sesi habis, silakan login kembali');
       }
 
       const data = await response.json();
-      
       if (!response.ok) {
         throw new Error(data.message || data.error || 'Terjadi kesalahan');
       }
-      
+
       return data;
     } catch (error) {
       console.error(`API Error ${endpoint}:`, error);
@@ -56,19 +46,20 @@ class ApiClient {
     }
   }
 
-  // ============ AUTH ENDPOINTS ============
-  
+  // ============ AUTH ============
   async login(email: string, password: string) {
     const data = await this.request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
+
     if (data.data?.token) {
       this.token = data.data.token;
       localStorage.setItem('token', data.data.token);
       localStorage.setItem('user', JSON.stringify(data.data.user));
-      localStorage.setItem('userRole', data.data.user?.role);
+      localStorage.setItem('userRole', data.data.user?.role || '');
     }
+
     return data;
   }
 
@@ -100,15 +91,9 @@ class ApiClient {
     localStorage.removeItem('userRole');
   }
 
-  // ============ DOSEN ENDPOINTS ============
-  
+  // ============ DOSEN ============
   async getDosenList() {
     const response = await this.request('/dosen');
-    return response.data;
-  }
-
-  async getDosenById(id: string) {
-    const response = await this.request(`/dosen/${id}`);
     return response.data;
   }
 
@@ -139,78 +124,26 @@ class ApiClient {
   }
 
   async deleteDosen(id: string) {
-    return this.request(`/dosen/${id}`, {
-      method: 'DELETE',
-    });
+    return this.request(`/dosen/${id}`, { method: 'DELETE' });
   }
 
-  // ============ MAHASISWA ENDPOINTS ============
-  
-  async getMahasiswaList() {
-    const response = await this.request('/mahasiswa');
-    return response.data;
-  }
-
-  async getMahasiswaById(id: string) {
-    const response = await this.request(`/mahasiswa/${id}`);
-    return response.data;
-  }
-
-  async createMahasiswa(data: {
-    email: string;
-    password: string;
-    nama: string;
-    nim: string;
-    angkatan: number;
-    noTelp?: string;
-    alamat?: string;
-  }) {
-    return this.request('/mahasiswa', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async updateMahasiswa(id: string, data: {
-    nama?: string;
-    noTelp?: string;
-    alamat?: string;
-  }) {
-    return this.request(`/mahasiswa/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async deleteMahasiswa(id: string) {
-    return this.request(`/mahasiswa/${id}`, {
-      method: 'DELETE',
-    });
-  }
-
-  // ============ PENGAJUAN JUDUL ENDPOINTS ============
-  
+  // ============ PENGAJUAN JUDUL ============
   async getPengajuanList() {
     const response = await this.request('/pengajuan');
     return response.data;
   }
 
-  async getPengajuanByMahasiswa() {
-    const response = await this.request('/pengajuan/me');
-    return response.data;
-  }
-
-  async createPengajuan(data: { judul: string; abstrak: string }) {
-    return this.request('/pengajuan', {
-      method: 'POST',
-      body: JSON.stringify(data),
+  async assignDosenPembimbing(id: string, dosenPembimbingId: string) {
+    return this.request(`/pengajuan/${id}/assign-dosen`, {
+      method: 'PUT',
+      body: JSON.stringify({ dosenPembimbingId }),
     });
   }
 
-  async approvePengajuan(id: string, dosenPembimbingId: string, catatan?: string) {
+  async approvePengajuan(id: string, catatan?: string) {
     return this.request(`/pengajuan/${id}/approve`, {
       method: 'PUT',
-      body: JSON.stringify({ dosenPembimbingId, catatan }),
+      body: JSON.stringify({ catatan }),
     });
   }
 
@@ -221,20 +154,14 @@ class ApiClient {
     });
   }
 
-  // ============ BIMBINGAN ENDPOINTS ============
-  
+  // ============ BIMBINGAN ============
   async getLogBimbinganAll() {
     const response = await this.request('/bimbingan');
     return response.data;
   }
 
-  async getLogBimbinganByMahasiswa() {
-    const response = await this.request('/bimbingan/me');
-    return response.data;
-  }
-
   async getLogBimbinganByDosen() {
-    const response = await this.request('/bimbingan/dosen');
+    const response = await this.request('/bimbingan');
     return response.data;
   }
 
@@ -251,26 +178,16 @@ class ApiClient {
   }
 
   async approveLogBimbingan(id: string) {
-    return this.request(`/bimbingan/${id}/approve`, {
-      method: 'PUT',
-    });
+    return this.request(`/bimbingan/${id}/approve`, { method: 'PUT' });
   }
 
   async rejectLogBimbingan(id: string) {
-    return this.request(`/bimbingan/${id}/reject`, {
-      method: 'PUT',
-    });
+    return this.request(`/bimbingan/${id}/reject`, { method: 'PUT' });
   }
 
-  // ============ JADWAL SIDANG ENDPOINTS ============
-  
+  // ============ JADWAL SIDANG ============
   async getJadwalSidangAll() {
     const response = await this.request('/sidang');
-    return response.data;
-  }
-
-  async getJadwalSidangByMahasiswa() {
-    const response = await this.request('/sidang/me');
     return response.data;
   }
 
@@ -301,82 +218,7 @@ class ApiClient {
   }
 
   async cancelJadwalSidang(id: string) {
-    return this.request(`/sidang/${id}/cancel`, {
-      method: 'PUT',
-    });
-  }
-
-  // ============ UPLOAD ENDPOINTS ============
-  
-  async uploadFile(file: File, jenis: 'berkas' | 'dokumen' = 'berkas') {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    const url = `${BASE_URL}/upload/${jenis}`;
-    const headers: Record<string, string> = {};
-    
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
-    }
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: formData,
-      });
-      
-      if (response.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('userRole');
-        window.location.href = '/login';
-        throw new Error('Sesi habis, silakan login kembali');
-      }
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || data.error || 'Upload gagal');
-      }
-      
-      return data;
-    } catch (error) {
-      console.error(`Upload Error:`, error);
-      throw error;
-    }
-  }
-
-  // ============ BERKAS ENDPOINTS ============
-  
-  async getBerkasList() {
-    const response = await this.request('/berkas');
-    return response.data;
-  }
-
-  async approveBerkas(id: string) {
-    return this.request(`/berkas/${id}/approve`, {
-      method: 'PUT',
-    });
-  }
-
-  async rejectBerkas(id: string, catatan: string) {
-    return this.request(`/berkas/${id}/reject`, {
-      method: 'PUT',
-      body: JSON.stringify({ catatan }),
-    });
-  }
-
-  // ============ STATISTIK ENDPOINTS ============
-  
-  async getDashboardStats() {
-    const response = await this.request('/stats/dashboard');
-    return response.data;
-  }
-
-  async getChartData(tahun?: number) {
-    const response = await this.request(`/stats/chart${tahun ? `?tahun=${tahun}` : ''}`);
-    return response.data;
+    return this.request(`/sidang/${id}/cancel`, { method: 'PUT' });
   }
 }
 
