@@ -113,7 +113,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-slate-900! placeholder:text-slate-400! caret-blue-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                 placeholder={activeTab === 'admin' ? 'admin@university.ac.id' : 'dosen@university.ac.id'}
                 required
               />
@@ -130,7 +130,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-slate-900! placeholder:text-slate-400! caret-blue-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                 placeholder="••••••••"
                 required
               />
