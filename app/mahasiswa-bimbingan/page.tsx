@@ -91,8 +91,17 @@ export default function MahasiswaBimbinganPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) { router.push('/login'); return; }
-    fetchData();
+
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void fetchData();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [router, fetchData]);
 
   const filtered = mahasiswaList.filter(m =>
@@ -132,7 +141,7 @@ export default function MahasiswaBimbinganPage() {
       <div className="flex-1 ml-64">
         <Header />
         <main className="p-6">
-          <div className="bg-gradient-to-r from-green-600 to-teal-600 rounded-xl p-6 mb-6 text-white">
+          <div className="bg-linear-to-r from-green-600 to-teal-600 rounded-xl p-6 mb-6 text-white">
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <GraduationCap className="w-7 h-7" />
               Mahasiswa Bimbingan Saya
@@ -187,7 +196,7 @@ export default function MahasiswaBimbinganPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <div className="bg-green-100 rounded-full w-10 h-10 flex items-center justify-center font-bold text-green-700 text-sm flex-shrink-0">
+                          <div className="bg-green-100 rounded-full w-10 h-10 flex items-center justify-center font-bold text-green-700 text-sm shrink-0">
                             {mhs.nama.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                           </div>
                           <div>
@@ -197,13 +206,13 @@ export default function MahasiswaBimbinganPage() {
                         </div>
                         {mhs.judul && (
                           <p className="text-sm text-gray-600 flex items-start gap-1 mt-1 ml-13">
-                            <BookOpen className="w-4 h-4 flex-shrink-0 mt-0.5 text-gray-400" />
+                            <BookOpen className="w-4 h-4 shrink-0 mt-0.5 text-gray-400" />
                             <span className="italic">{mhs.judul}</span>
                           </p>
                         )}
                       </div>
 
-                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                      <div className="flex flex-col items-end gap-2 shrink-0">
                         {getStatusJudulBadge(mhs.statusJudul)}
                         <div className="flex items-center gap-1 text-sm text-gray-500"><MessageSquare className="w-4 h-4" /><span>{mhs.totalBimbingan} pertemuan</span></div>
                         {mhs.lastBimbingan && <div className="flex items-center gap-1 text-xs text-gray-400"><Calendar className="w-3 h-3" /><span>Terakhir: {mhs.lastBimbingan}</span></div>}
